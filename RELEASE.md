@@ -43,7 +43,7 @@
 
 文件：`registry-pr/ZhaoZeW__dsh-rollback.yml`（本地，已 gitignore 以免与注册表那份漂移）
 
-放进注册表仓库的 `data/plugins/` 下即可：
+放进注册表仓库的 `data/plugins/` 下即可。**若已上传 Release tarball，再加一行 `tarball:`**：
 
 ```yaml
 url: https://github.com/ZhaoZeW/dsh-rollback
@@ -52,57 +52,67 @@ category: ui
 description:
   en: 'TRAE-style conversation rollback for DeepSeek Harness: per-turn file checkpoints, restore plus in-place context truncation, an affected-file diff preview, and a /rollback doctor contract self-check.'
   zh: 'TRAE 式「回退」插件：按轮次建立文件检查点，一键把工作区文件与模型上下文同时回退到某一轮发起之前；带受影响文件 diff 预览与 /rollback doctor 契约自检。'
+tarball: https://github.com/ZhaoZeW/dsh-rollback/releases/latest/download/dsh-rollback.tgz   # 上传 Release 后再加
 ```
 
 **不要**手工编辑该仓库的 README / README.zh.md（由 `data/plugins/*.yml` 生成）。
 
 ---
 
-## 四、npm 发布：需要你先做一个决定 ⚠️
+## 四、发布路线：不走 npm（已确认采用）⚠️
 
-我探测到：
+用户**没有 npm 账号**，而 `@nianchu` / `@zhaozew` 这类 scope 需要拥有同名用户名或组织，因此本轮**不发布 npm**。
 
-| 包名 | 状态 |
-|---|---|
-| `dsh-rollback` | **已被占用** |
-| `@zhaozew/dsh-rollback` | 可用 |
-| `@nianchu/dsh-rollback` | 名称可用，**但 `nianchu` 这个 npm 用户名/组织不是你的** |
+官方对此明确表态：*"listing is unaffected either way"* —— **收录与 npm 无关**，只是市场上不显示下载量数字。
 
-npm 的 scoped 包要求你**拥有同名用户名或组织**。你的 GitHub 是 `ZhaoZeW`：
-
-- 若你的 **npm 用户名也是 `ZhaoZeW`** → 建议把包改名为 **`@zhaozew/dsh-rollback`**（我可以一键改，改名不影响已推送的仓库）
-- 若你确实想用 `@nianchu` → 需要去 npmjs.com 建一个叫 `nianchu` 的组织。**但如果那个用户名已被别人注册，你就拿不到**（npm 用户名不可重复，用 GitHub 登录也不保证同名可用）
-- **不发 npm 也完全可以**：官方明确说收录与 npm 无关，只是市场上没有下载量数字
-
-无论哪个包名，**`repository` 字段必须指回 `ZhaoZeW/dsh-rollback`**（官方硬性要求，否则市场不会关联）——这一项已经填对。
-
-发布命令（确定包名后）：
-
-```powershell
-npm adduser --registry=https://registry.npmjs.org        # 你自己登录，别给我密码
-npm publish --registry=https://registry.npmjs.org --access public
-```
-
-⚠️ 本机 `.npmrc` 的 registry 是 `https://registry.npmmirror.com`（**镜像站只能读不能发**），所以必须显式指定官方 registry。⚠️ `--access public` 对 scoped 包是必需项。
-
----
-
-## 五、不发 npm 的替代方案
-
-把预构建 tarball 挂到 GitHub Release，条目加 `tarball:` 字段：
+**已实测的替代方案：预构建 tarball + GitHub Release**
 
 ```powershell
 cd C:\Users\Administrator\.dsh\nianchu-plugins\dsh-rollback
-node scripts/pack-tarball.mjs     # 产出 release/dsh-rollback.tgz（故意不带版本号）
+node scripts/pack-tarball.mjs
+# 产出 release/dsh-rollback.tgz（不带版本号，配 latest/download/ 用）
+#      release/dsh-rollback-0.4.0.tgz（带版本号，配钉住 tag 的 URL 用）
 ```
 
-然后到 <https://github.com/ZhaoZeW/dsh-rollback/releases/new> 手动上传该 tgz，打 tag `v0.4.0`。条目加：
+已实测：用 `--ignore-scripts` 装这个 tarball（即纯预构建消费，不跑任何构建），`package.json`、`cordis.patch.yml`、`lib/index.js`、`lib/client.js`、`lib/invariant.js` **全部落地** → 免构建可安装 ✅
+
+**上传步骤（网页操作）**
+
+1. 打开 <https://github.com/ZhaoZeW/dsh-rollback/releases/new>
+2. **Choose a tag** 输入 `v0.4.0` → 点 **Create new tag: v0.4.0 on publish**
+3. **Release title** 填 `v0.4.0`
+4. **Describe this release** 可从 `CHANGELOG.md` 复制 0.4.0 那一段
+5. **Attach binaries** 把 `release/dsh-rollback.tgz` 拖进去
+6. 点 **Publish release**
+
+发布后注册表条目加一行：
 
 ```yaml
 tarball: https://github.com/ZhaoZeW/dsh-rollback/releases/latest/download/dsh-rollback.tgz
 ```
 
-> 资产名**故意不带版本号**：`releases/latest/download/` 会在请求时解析 `latest` 但照字面取文件名，带版本号的名字提交当天有效、下次发版就 404（官方称之为 "quiet rot"）。
+> 资产名**故意不带版本号**：`releases/latest/download/` 会在请求时解析 `latest` 但**照字面取文件名**，带版本号的名字提交当天有效、下次发版就 404（官方称之为 "quiet rot"）。
+
+**如果日后想改用 npm**（可选，随时可加）：
+
+1. 到 <https://www.npmjs.com/signup> 注册账号（免费），验证邮箱
+2. 若要用 scoped 包名，需用户名与 scope 同名；否则改用无 scope 名（`dsh-rollback` 已被占用，需另想名字）
+3. `npm adduser --registry=https://registry.npmjs.org`（**你自己登录，不要把密码给我**）
+4. `npm publish --registry=https://registry.npmjs.org --access public`
+5. ⚠️ 本机 `.npmrc` 的 registry 是 `https://registry.npmmirror.com`（**镜像站只能读不能发**），所以上面两条命令**必须显式指定**官方 registry
+6. ⚠️ `--access public` 对 scoped 包是必需项，否则会以私有包发布失败
+7. 发布后自查 `repository` 是否回指本仓库（官方硬性要求，否则市场不会关联）：
+   ```powershell
+   npm view @你的scope/dsh-rollback repository.url
+   ```
+
+**当前 `repository` 字段已填对**：`git+https://github.com/ZhaoZeW/dsh-rollback.git`，所以日后无论走 npm 还是 tarball 都不会踩这个坑。
+
+## 五、替代方案的本地验证
+
+```powershell
+dsh plugin --profile web add file:C:/Users/Administrator/.dsh/nianchu-plugins/dsh-rollback/release/dsh-rollback.tgz
+```
 
 ---
 
