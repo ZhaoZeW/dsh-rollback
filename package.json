@@ -50,7 +50,8 @@
     "rollback",
     "checkpoint",
     "trae",
-    "plugin"
+    "plugin",
+    "dsh-plugin"
   ],
   "peerDependencies": {
     "react": "^18.2.0"
@@ -68,5 +69,13 @@
     "lib/client.js",
     "cordis.patch.yml",
     "CHANGELOG.md"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nianchu/dsh-rollback.git"
+  },
+  "homepage": "https://github.com/nianchu/dsh-rollback#readme",
+  "bugs": {
+    "url": "https://github.com/nianchu/dsh-rollback/issues"
+  }
 }
