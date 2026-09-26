@@ -1,0 +1,13 @@
+# Normalize line endings in the repository. Without this, a Windows checkout
+# converts every text file to CRLF on commit, and the diff a reviewer reads on
+# GitHub is noise rather than content.
+* text=auto eol=lf
+
+# Binary assets stay untouched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.tgz binary
+*.ico binary
