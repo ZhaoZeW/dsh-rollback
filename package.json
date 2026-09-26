@@ -72,10 +72,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nianchu/dsh-rollback.git"
+    "url": "git+https://github.com/ZhaoZeW/dsh-rollback.git"
   },
-  "homepage": "https://github.com/nianchu/dsh-rollback#readme",
+  "homepage": "https://github.com/ZhaoZeW/dsh-rollback#readme",
   "bugs": {
-    "url": "https://github.com/nianchu/dsh-rollback/issues"
+    "url": "https://github.com/ZhaoZeW/dsh-rollback/issues"
   }
 }

@@ -1,5 +1,5 @@
-url: https://github.com/nianchu/dsh-rollback
-name: nianchu/dsh-rollback
+url: https://github.com/ZhaoZeW/dsh-rollback
+name: ZhaoZeW/dsh-rollback
 category: ui
 description:
   en: 'TRAE-style conversation rollback for DeepSeek Harness: per-turn file checkpoints, restore plus in-place context truncation, an affected-file diff preview, and a /rollback doctor contract self-check.'
