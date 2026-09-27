@@ -1,6 +1,10 @@
 # 上架交接单（@nianchu/dsh-rollback → github.com/ZhaoZeW/dsh-rollback）
 
-**状态：仓库已发布、Release 已发布、条目已提交 PR：<https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992>**
+**状态：npm 已发布 · GitHub 仓库与 Release 已发布 · 注册表 PR 已提交（等合并）**
+
+- npm：`@nianchu/dsh-rollback@0.4.1`（`latest`）— 见第九节
+- 注册表 PR：<https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992> — 见第八节
+- ⚠️ 待办：0.4.1 的**代码尚未推送**到 GitHub，`v0.4.1` 的 tag/Release 也还没建（需要一个新 GitHub token）
 
 ---
 
@@ -18,6 +22,9 @@
 | **tarball 免构建可安装** | ✅ 实测（`--ignore-scripts` 下入口产物全部落地） |
 | **发布资产完整性** | ✅ GitHub 侧 digest `sha256:f4379a18…` 与本地实测那份**完全一致** |
 | **`latest/download` 链接** | ✅ 首次核对返回 HTTP 200 且下载字节与本地逐字节一致 |
+| **npm 包** | ✅ `@nianchu/dsh-rollback` `0.4.0` 与 `0.4.1` 均已发布；`npm i @nianchu/dsh-rollback` 实测通过（见第九节） |
+| **npm ↔ 仓库关联** | ✅ 线上 `repository = git+https://github.com/ZhaoZeW/dsh-rollback.git`（市场自动采集靠这个字段） |
+| ⚠️ 尚待补 | GitHub Release 目前仍是 **v0.4.0**；`v0.4.1` 的代码与 tag/Release 尚未推送 |
 
 ---
 
@@ -51,13 +58,11 @@ tarball: https://github.com/ZhaoZeW/dsh-rollback/releases/latest/download/dsh-ro
 
 ---
 
-## 四、发布路线：不走 npm（已确认采用）⚠️
+## 四、发布路线
 
-用户**没有 npm 账号**，而 `@nianchu` / `@zhaozew` 这类 scope 需要拥有同名用户名或组织，因此本轮**不发布 npm**。
+> ⚠️ **本节原有结论「本轮不发布 npm」已作废**（写于 2026-09-26，当时还没有 npm 账号）。实际已于 **2026-09-27 发布 npm**，完整实录见**第九节**。下面保留的是 tarball 路线 —— 它仍然是**注册表条目实际使用**的那条路（`tarball:` 字段指向 Release 资产），价值没变。
 
-官方对此明确表态：*"listing is unaffected either way"* —— **收录与 npm 无关**，只是市场上不显示下载量数字。
-
-**已实测的替代方案：预构建 tarball + GitHub Release**
+**两条路线并存**：npm（按名字安装 + 市场可显示下载量）+ 预构建 tarball（免构建安装，注册表指向它）
 
 ```powershell
 cd C:\Users\Administrator\.dsh\nianchu-plugins\dsh-rollback
@@ -85,26 +90,24 @@ tarball: https://github.com/ZhaoZeW/dsh-rollback/releases/latest/download/dsh-ro
 
 > 资产名**故意不带版本号**：`releases/latest/download/` 会在请求时解析 `latest` 但**照字面取文件名**，带版本号的名字提交当天有效、下次发版就 404（官方称之为 "quiet rot"）。
 
-**如果日后想改用 npm**（可选，随时可加）：
+**npm 那条路已于 2026-09-27 走通** —— 实录见第九节（含两次 403 的真实原因、新账号拿不到 TOTP、bypass-2FA token 的生成方式与 2027 年 1 月的失效期限）。
 
-1. 到 <https://www.npmjs.com/signup> 注册账号（免费），验证邮箱
-2. 若要用 scoped 包名，需用户名与 scope 同名；否则改用无 scope 名（`dsh-rollback` 已被占用，需另想名字）
-3. `npm adduser --registry=https://registry.npmjs.org`（**你自己登录，不要把密码给我**）
-4. `npm publish --registry=https://registry.npmjs.org --access public`
-5. ⚠️ 本机 `.npmrc` 的 registry 是 `https://registry.npmmirror.com`（**镜像站只能读不能发**），所以上面两条命令**必须显式指定**官方 registry
-6. ⚠️ `--access public` 对 scoped 包是必需项，否则会以私有包发布失败
-7. 发布后自查 `repository` 是否回指本仓库（官方硬性要求，否则市场不会关联）：
-   ```powershell
-   npm view @你的scope/dsh-rollback repository.url
-   ```
-
-**当前 `repository` 字段已填对**：`git+https://github.com/ZhaoZeW/dsh-rollback.git`，所以日后无论走 npm 还是 tarball 都不会踩这个坑。
-
-## 五、替代方案的本地验证
+## 五、本地安装的三种方式（按推荐度）
 
 ```powershell
-dsh plugin --profile web add file:C:/Users/Administrator/.dsh/nianchu-plugins/dsh-rollback/release/dsh-rollback.tgz
+# 1) 从 npm 按名字装（推荐；0.4.1 起可用）
+dsh plugin --profile web add -w @nianchu/dsh-rollback
+
+# 2) 本地预构建 tarball（离线可用）
+dsh plugin --profile web add -w file:C:/Users/Administrator/.dsh/nianchu-plugins/dsh-rollback/release/dsh-rollback.tgz
+
+# 3) GitHub 源（会拉整仓并跑 prepare 本地构建，最慢）
+dsh plugin --profile web add -w github:ZhaoZeW/dsh-rollback
 ```
+
+> - `-w` **必须显式带**，`dsh plugin` 不会自动加；漏了会报 `ERR_PNPM_ADDING_TO_ROOT`。
+> - 装完**必须重启 DSH**：profile 的 bundle 列表只在启动时组装。
+> - ⚠️ 一次失败的 `add` 可能把插件从 profile 里移除（本项目就遇到过），切换安装方式前先记下当前 spec 以便回滚。
 
 ---
 
@@ -112,7 +115,7 @@ dsh plugin --profile web add file:C:/Users/Administrator/.dsh/nianchu-plugins/ds
 
 | 场景 | 做法 |
 |---|---|
-| 改代码后发布 | `node scripts/build.mjs` → 改 `package.json` 的 `version` → 提交推送 → 打 tag → `npm publish` 或更新 Release 资产 |
+| 改代码后发布 | ① 改 `package.json` 的 `version` **和 `src/core/contract-audit.ts` 的 `PLUGIN_VERSION`（两者必须一致，否则 `tests/contract-audit.test.ts` 直接红）** → ② `node scripts/build.mjs` → ③ `node scripts/run-tests.mjs`（273 项）+ `node scripts/verify-artifacts.mjs`（27 项）→ ④ `node scripts/pack-tarball.mjs` → ⑤ 提交推送 + 打 tag + 传 Release 资产 → ⑥ `npm publish --registry=https://registry.npmjs.org --access public` |
 | **注册表条目不用动** | 版本与下载量由 registry 自动采集，条目只有 url/name/category/description |
 | 改描述或换分类 | 编辑注册表里你那**一个** yml 再提 PR（官方要求：只改自己那一条） |
 | 换截图 | 在本仓库加 `screenshots.json` 并推自己的仓库即可，**不用提 PR**，市场下次构建自动生效 |
@@ -159,5 +162,60 @@ run `36320351090`（workflow `PR check` / job `check`）：**17/17 步全部 `su
 ### 后续
 
 - [ ] 合并后注册表站点自动重建，条目出现在 `ui` 分类；市场（dsh-market）可搜到并用那个 Release tarball 一键安装
-- [ ] **立即吊销**那个 classic token（已无用）
+- [ ] 提 PR 用的 classic token（`public_repo`）若还没删，请吊销 —— **这条请自行确认**
+
+---
+
+## 九、npm 发布（已完成，实录）
+
+| 项 | 实测 |
+|---|---|
+| 包 / 账号 | `@nianchu/dsh-rollback`，账号 `nianchu`（邮箱已验证） |
+| 已发布版本 | **0.4.0**（`2026-09-27T15:16:11Z`）与 **0.4.1**（同日，现为 `latest`） |
+| 发布命令 | `npm publish --registry=https://registry.npmjs.org --access public` |
+| 服务端响应 | `PUT https://registry.npmjs.org/@nianchu%2fdsh-rollback` → **HTTP 200** |
+| 制品校对 | 从注册表下载的 tarball sha1 与发布时一致（0.4.0 = `1f516737…`） |
+| 关联字段 | `repository = git+https://github.com/ZhaoZeW/dsh-rollback.git` ✅ |
+| 按名字安装 | 临时目录 `npm install @nianchu/dsh-rollback` → 4 个包、产物齐全 ✅ |
+
+### 9.1 两次 403 的真实原因
+
+1. 第一次 → 账号 `two-factor auth: disabled`。npm 现在硬性要求「**2FA 或带 bypass-2FA 的 granular token**」才能发布。
+2. 第二次 → 2FA 已是 `auth-and-writes`，但**没有任何已注册的第二因素**（手机上的安全密钥注册在客户端报 `Device registration failed`），挑战无从发起 → 依旧 403。
+
+### 9.2 最终生效的方式：bypass-2FA 的 granular access token
+
+在 <https://www.npmjs.com/settings/nianchu/tokens> 生成 **Granular Access Token**：
+
+- 名称 `dsh-rollback publish`
+- **勾选 `Bypass two-factor authentication (2FA)`**（漏了必然还是 403）
+- Permissions：**`Read and write (publish and stage)`** —— 别选成名字极像的 `Read and write (stage only)`
+- Select packages：`Only select packages and scopes` → **`@nianchu`**（个人 scope）
+- Allowed IP ranges 留空；Expiration 90 天
+- 写入 `C:\Users\Administrator\.npmrc`：`//registry.npmjs.org/:_authToken=<token>`
+
+> ⚠️ **官方计划 2027 年 1 月取消 bypass-2FA token 的直接发布能力**。届时要么迁到 **Trusted Publishing（OIDC，需 CI 环境）**，要么改用 **staged publishing**：`npm stage publish` → 人工 `npm stage approve <stage-id>`（npm 11.16 已支持 `npm stage` 子命令）。
+
+### 9.3 两个必须记住的坑
+
+1. **新账号拿不到 TOTP**。npm 官方回复（[Discussion #182325](https://github.com/orgs/community/discussions/182325)）：自 2025 年 9 月起**不再允许新配置 TOTP（验证器 App）**，只提供 **Security key**。所以 `npm publish` 里 `Enter OTP:` 那条路对新账号**根本不存在** —— 网上大量「开 2FA 然后输 6 位码」的教程对你无效。
+2. **`www.npmjs.com` 对脚本客户端返回 403**。Cloudflare 按**客户端指纹**区分：真人 Chrome 能打开，`curl` 一律 403。所以**注册、改设置、建 token 必须用浏览器**；命令行侧用 `--auth-type=legacy` 登录或直接用 token。
+   - 另外：`npm adduser --auth-type=legacy` **创不了号**，服务端明确回 `Account creation via legacy auth is unavailable`，legacy 只能用于**登录已有账号**。
+
+### 9.4 国内镜像
+
+本机 `.npmrc` 默认 registry 是 `registry.npmmirror.com`，**该镜像尚未同步这个新包**。已配置：
+
+```
+@nianchu:registry=https://registry.npmjs.org/
+```
+
+同事用镜像装不上时，加这一行即可。注意**注册表/市场的一键安装走的是 Release tarball，与 npm 镜像无关**。
+
+### 9.5 待办
+
+- [ ] 推送 0.4.1 代码到 GitHub 并建 Release **`v0.4.1`**（上传 `release/dsh-rollback.tgz`，资产名不带版本号）—— **需要一个新 GitHub token**
+- [ ] npm token（90 天有效、可发布）建议用顺手后轮换；`.npmrc` 里是明文，且它曾出现在会话记录里
+- [ ] 账号目前 `auth-and-writes` 但**无可用第二因素**：改密码 / 改权限 / 建 token 都会被卡。需要时用浏览器 + Windows Hello 补一把 Security key
+
 

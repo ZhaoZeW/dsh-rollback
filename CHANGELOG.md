@@ -1,5 +1,11 @@
 # 更新日志
 
+## 0.4.1 — 修正 bundle patch 的过期注释
+
+- **`cordis.patch.yml` 的注释不再声称存在模型工具**：原文沿用上游的「exposed as a model `rollback` tool」，但本 fork 的 `inject` 列表不含 `tools` 服务，源码中也没有任何 tool 注册 —— 实际暴露面只有 `/rollback` 命令（`src/index.ts:172` 的 `ctx.commands.register`）与两个 Web 插槽（每轮回退按钮、回退标记节点）。现改为如实描述，并明确标注**只能由人发起**。
+- **版本常量同步**：`src/core/contract-audit.ts` 的 `PLUGIN_VERSION` 提到 `0.4.1`（由 `tests/contract-audit.test.ts` 断言必须等于 `package.json` 的 `version`，漏改会让测试红）。
+- **行为无变更**：除上述版本字符串外，`lib/index.js`、`lib/client.js`、`lib/invariant.js` 与 0.4.0 的差异**仅限 `PLUGIN_VERSION` 那一行**，无任何逻辑改动。
+
 ## 0.4.0 — 由 nianchu 重建（基线：上游 0.3.1）
 
 ### 身份

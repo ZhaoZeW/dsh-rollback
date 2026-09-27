@@ -2,8 +2,11 @@
 # Applied by `dsh plugin add` into any profile that lists this bundle.
 #
 # TRAE-style rollback: per-turn file checkpoints + in-place conversation
-# truncation, exposed as a model `rollback` tool, a `/rollback` command, and a
-# Web rollback button with affected-file diff preview.
+# truncation, exposed as a `/rollback` command and a per-turn Web rollback
+# button with an affected-file diff preview.
+#
+# Human-initiated only: this bundle registers no model-facing tool. (The
+# upstream text claimed a model `rollback` tool; the fork never had one.)
 - insert:
     - id: rollback
       name: '@nianchu/dsh-rollback'
