@@ -214,8 +214,11 @@ run `36320351090`（workflow `PR check` / job `check`）：**17/17 步全部 `su
 
 ### 9.5 待办
 
-- [ ] 推送 0.4.1 代码到 GitHub 并建 Release **`v0.4.1`**（上传 `release/dsh-rollback.tgz`，资产名不带版本号）—— **需要一个新 GitHub token**
-- [ ] npm token（90 天有效、可发布）建议用顺手后轮换；`.npmrc` 里是明文，且它曾出现在会话记录里
-- [ ] 账号目前 `auth-and-writes` 但**无可用第二因素**：改密码 / 改权限 / 建 token 都会被卡。需要时用浏览器 + Windows Hello 补一把 Security key
+- [x] **推送与 Release 已完成**（2026-09-27）：`main = 31369a6`、tag `v0.4.1 → 31369a6`、Release `v0.4.1` 含两个资产（`dsh-rollback.tgz` 版本无关 + `dsh-rollback-0.4.1.tgz`）。`latest/download/dsh-rollback.tgz` 实测 HTTP 200 且 sha1 与本地逐字节一致。
+      ⚠️ 两个坑值得记：① 资产上传成功后**下载端点会先返回 404 约 2 分钟**（新资产的 CDN 传播延迟）。判断「字节到底在不在」要用 API 资产端点 `GET /repos/{owner}/{repo}/releases/assets/{id}`（带 `Accept: application/octet-stream`）再比对校验和，**不要**反复刷新下载链接下结论；② 首次上传曾 `HTTP 000`（GitHub 连接被重置），加重试即成功。
+- [x] **2FA 已完整配置**（2026-09-27）：设置页显示 `Enabled for authorization and publishing`（= `auth-and-writes`）+ `1 security key`。用的是 Chrome + Windows Hello，**platform authenticator，不需要 USB 硬件** —— 之前手机上报 `Device registration failed` 的原因是那台第三方/内置浏览器不支持 WebAuthn，换 Chrome 后一次通过。
+- [ ] 建议：在同一设置页的 **Linked Accounts & Recovery Option (Beta) → Link with GitHub** 绑定 GitHub。新账号拿不到 TOTP，也就没有「验证器 + 恢复码」那条传统恢复路径，npm 官方把「绑定账号」作为身份核验的兜底。
+- [ ] npm token：**实测它现在只剩「发布」能力** —— `npm whoami` 正常，但 `npm profile get --registry=https://registry.npmjs.org` 直接 `403 Forbidden - GET /-/npm/v1/user`，附提示 *tokens that bypass 2FA are being restricted for account changes*。所以改设置、建/删 token **必须走浏览器**（现在有 security key，做得到）。副作用是它的权限面比一般理解更小，留着等 90 天自然过期即可。
+- [ ] **已知遗留（未验证）**：本次重启前后，当前会话的检查点文件从 ~386 KB 变为 ~237 KB（插件从会话日志重建捕获状态所致）。**「跨重启回退到重启前某轮」是否仍正常，尚未实测** —— 需要用界面里的 `/rollback list` 与 `/rollback doctor` 确认。
 
 
