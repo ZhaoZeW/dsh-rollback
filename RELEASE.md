@@ -1,41 +1,33 @@
 # 上架交接单（@nianchu/dsh-rollback → github.com/ZhaoZeW/dsh-rollback）
 
-**状态：仓库已建好、已推送、已加 topic。只差 24 小时的时间门槛和 npm 那一步。**
+**状态：仓库已发布、Release 已发布、条目已提交 PR：<https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992>**
 
 ---
 
-## 一、已完成（我做的，全部经 API 核对）
+## 零、已完成总览（全部经 API 或实测核对）
 
 | 项 | 实测结果 |
 |---|---|
-| GitHub 仓库 | <https://github.com/ZhaoZeW/dsh-rollback>（**Public**） |
-| 默认分支 | `main`，HEAD = `aa1fa36` |
-| 文件数 | **73**，含 `lib/index.js`、`lib/client.js`、`lib/invariant.js` |
+| GitHub 仓库 | <https://github.com/ZhaoZeW/dsh-rollback>（Public，默认分支 `main`） |
+| 文件数 | **75**，含 `lib/index.js`、`lib/client.js`、`lib/invariant.js` |
 | 误入库 | `node_modules` 0 个、`tests/.suite` 0 个 |
-| `dsh-plugin` topic | ✅ 已加（注册表 CI 会检查） |
-| 仓库描述 | ✅ 已填 |
-| `dsh.bundle` 声明 | ✅ `{ "patch": "./cordis.patch.yml" }` |
+| `dsh-plugin` topic | ✅ 已加（注册表 CI 必查） |
+| `dsh.bundle` 声明 | ✅ `{ "patch": "./cordis.patch.yml" }`（CI 第 2 项检查，最常见的被拒原因就是缺它） |
 | `repository` 字段 | ✅ `git+https://github.com/ZhaoZeW/dsh-rollback.git` |
-| **从 GitHub 安装实测** | ✅ 通过（`prepare` 真实重建了产物，`lib/` 也随包落地） |
-
-### ⚠️ 两个关键修正（我原先说错的地方）
-
-1. **你的 GitHub 登录名是 `ZhaoZeW`，不是 `nianchu`。**「nianchu」是你资料页的**显示名**（display name）。注册表用的是仓库 URL 与 owner，所以条目必须是 `ZhaoZeW/dsh-rollback`、文件名 `ZhaoZeW__dsh-rollback.yml`。
-2. **`lib/` 必须提交进仓库**（我原先 gitignore 掉了，已修正）。原因：DSH 从 bundle patch 指向的文件加载插件，而 GitHub 安装不装 devDependencies——`scripts/build.mjs` 依赖 rolldown，在用户机器上跑不了。提交 `lib/` 是让 GitHub 安装真正可用的前提。已实测：装完 `lib/` 齐备。
+| **GitHub Release** | ✅ tag `v0.4.0`，`dsh-rollback.tgz` 72636 B，非 draft、非 prerelease |
+| **tarball 免构建可安装** | ✅ 实测（`--ignore-scripts` 下入口产物全部落地） |
+| **发布资产完整性** | ✅ GitHub 侧 digest `sha256:f4379a18…` 与本地实测那份**完全一致** |
+| **`latest/download` 链接** | ✅ 首次核对返回 HTTP 200 且下载字节与本地逐字节一致 |
 
 ---
 
-## 二、只剩 1 个时间门槛
+## 一、只剩 1 个时间门槛
 
-仓库创建于 **2026-09-26T11:08:03Z**。
+仓库创建于 **2026-09-26T11:08:03Z**。注册表 CI 硬性要求仓库创建**满 24 小时**。
 
-**注册表 CI 硬性要求仓库创建满 24 小时**，即最早可提 PR 的时间：
+> **最早可提 PR：2026-09-26T11:08:03Z = 北京时间 2026-09-27 19:08**
 
-```
-2026-09-27T11:08:03Z  （北京时间 2026-09-27 19:08）
-```
-
-届时告诉我，我用同一个 token 提 PR（需 `Pull requests: Read and write`，已具备）。
+✅ **已于 2026-09-27 晚间提 PR（见第八节），此门槛已过。**
 
 ---
 
@@ -136,4 +128,36 @@ dsh plugin --profile web add file:C:/Users/Administrator/.dsh/nianchu-plugins/ds
 - remote 是干净的 `https://github.com/ZhaoZeW/dsh-rollback.git`
 - 推送改用临时 credential helper，用完即删
 
-**请你现在就到 <https://github.com/settings/personal-access-tokens> 把这个 token Revoke 掉**，等 24 小时后要提 PR 时再新建一个（只需 `Pull requests: Read and write` + `Contents: Read and write`，且可限定为 `Only select repositories` → `ZhaoZeW/dsh-rollback`，比现在这个权限小得多）。
+⚠️ **更正（2026-09-27）**：上面那句关于 token 权限的建议**是错的**。`Only select repositories` → 只勾 `ZhaoZeW/dsh-rollback` 提不了这个 PR——PR 要往 `awesome-dsh-plugin` 的 **fork 仓库**里写文件，那是一个当时还不存在的仓库，fine-grained token 覆盖不到。实际使用的是 **classic token，只勾 `public_repo`**（公开仓库读写，不含账号级与删除能力），提完即吊销。
+
+---
+
+## 八、注册表 PR（已提交）
+
+| 项 | 实测 |
+|---|---|
+| PR | <https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992> — `Add ZhaoZeW/dsh-rollback` |
+| 分支 | fork `ZhaoZeW/awesome-dsh-plugin` 的 `add-zhaozew-dsh-rollback`（基于上游 `main` = `55c2667b`） |
+| 提交 | `95d5c7f2` |
+| 改动 | **恰好 1 个文件**：新增 `data/plugins/ZhaoZeW__dsh-rollback.yml`（+7/−0），未触碰任何他人条目 |
+| 内容一致性 | 上传内容与本地文件**逐字节一致**（1133 B，无 BOM）；远端 blob sha `74580a33` |
+| `category` | `ui`（注意：同功能的上游条目 `domitor-syh/dsh-rollback` 在 `session`；注册表规则允许分类近似，维护者会直接改而不打回） |
+
+### 提 PR 时发现的两个新情况
+
+1. **上游同功能条目已存在**：`data/plugins/domitor-syh__dsh-rollback.yml` 已收录，描述与本条目高度重合。注册表审核规则第 4 条明确「两个插件做同一件事，**规则不是先来后到，规则是谁更好**，维护得更好的 fork 会被收录」。因此描述改为**写明本 fork 的增量**（`/rollback doctor` 契约自检、按当前磁盘状态实时计算的 diff 预览、一键 `undo-last` 与 `Ctrl+Shift+Z`、「回退后隐藏已回退消息」开关、英文文案），每一项都已对着源码核实，以规避「重复条目」判定。
+2. **`": "` 必须加引号**：`description.en` 里含 `: `，YAML 会把它读成嵌套键，故 en/zh 均用单引号包裹（注册表 `contributing.md` 明文要求）。
+
+### CI 结果
+
+run `36320351090`（workflow `PR check` / job `check`）：**17/17 步全部 `success`**，PR `mergeable_state = clean`、非 draft、1 commit / 1 file（+7/−0）。
+
+覆盖到的机械检查：`Stale-fork guard`、条目文件必须位于 `data/plugins/` 且以 `.yml` 结尾、`READMEs match data/plugins`、`awesome-lint`、`Added-date regression tests`、`Capability-disclosure tests`（对应 `dsh.bundle` 那一项）、`Build (locale parity, date derivation, templates)`。
+
+「一个 PR 最多 3 条」与「仓库创建满 1 天」这两项 CI 未单列步骤，我另行用 API 自查：本 PR 只含 1 个条目文件；仓库创建于 `2026-09-26T11:08:03Z`，提 PR 时已满 25.6 小时。
+
+### 后续
+
+- [ ] 合并后注册表站点自动重建，条目出现在 `ui` 分类；市场（dsh-market）可搜到并用那个 Release tarball 一键安装
+- [ ] **立即吊销**那个 classic token（已无用）
+
