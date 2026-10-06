@@ -296,3 +296,22 @@ DesktopHostFatalError: Unexpected token '', "{
 **规则：不要用 PS 5.1 的 `Set-Content -Encoding UTF8` 改 profile 的 JSON/YAML。** 改用 node（`fs.writeFileSync(p, text, 'utf8')` 不写 BOM）或 `[System.IO.File]::WriteAllText($p, $s, (New-Object System.Text.UTF8Encoding($false)))`。改完务必校验首字节不是 `EF BB BF` 并 `JSON.parse` 一次。
 
 同理：**不要用 PowerShell 拼 GitHub API 的 JSON 正文**（见 10.5 第 1 条）——同一个成因。核对文件内容也别用 `Select-String -SimpleMatch`（会给假阴性），用 node。
+
+
+### 10.8 0.4.3 发布（纯文档版）与本次新踩的坑
+
+0.4.3 **没有任何行为改动**（`lib/*.js` 与 0.4.2 的差异仅 `PLUGIN_VERSION` 一行）。重新发布的唯一理由是：**npm 页面上的介绍是发布时烘进 tarball 的 README** —— 只改 README 而不重新发布，npm 上那一页永远不会变。
+
+- 代码：`2e36a1d`「docs: 0.4.3 - document 0.2.0-rc.2 (official desktop) support and the 0.4.2 fix」（5 files changed, +111/−52），注解 tag `v0.4.3`。
+- npm：`@nianchu/dsh-rollback@0.4.3`（`latest`），shasum `1a6c1b5e27ac5c269b71738b264ca1e6ea4da5f7`，`gitHead = 2e36a1d6388612f3ddc1fe78b41d18bae0b13774`。
+- GitHub Release `v0.4.3`（id `404444289`）：`dsh-rollback.tgz` + `dsh-rollback-0.4.3.tgz`，各 79130 B、sha1 `679e623d8264d3be84a889b9139b041fee59be5b`，用 API 资产端点复核 `state=uploaded` 且与本地逐字节一致。
+- 仓库 About 更新：description 改为中文（讲功能 + 标注 0.2.0-rc.2 已实测）、homepage 由 `github.com/nianchu/dsh-rollback` 改为 npm 包页、topics 由 `["dsh-plugin"]` 扩到 7 个。
+- 市场目录条目**无需改动**：`npm: @nianchu/dsh-rollback` 与 `tarball: .../latest/download/dsh-rollback.tgz` 两条安装路径都自动跟随最新版。目录里的 `version` 展示字段由对方 CI 抓取，会滞后（核对时仍是 0.4.1）。
+- 文档口径修正：上游 0.4.0 **也**独立适配了 0.2.0-rc.2，所以 README 不再写「上游从未验证」；改为明确两者**不能同时安装**（同一插件 id `rollback`、同一 `/rollback` 命令），并把行为差异表显式限定为「相对本 fork 自己的基线（上游 0.3.1）」。
+
+#### 本次新踩的坑
+
+1. **`PATCH /repos/{owner}/{repo}` 里的 `topics` 会被静默忽略**：返回 HTTP 200，但 topics 原样不变（description / homepage 却生效了）。要用专用端点 **`PUT /repos/{owner}/{repo}/topics`**，body 为 `{"names":[...]}`。
+2. **npm 发布后版本文档会先连续 404**：本次实测 `GET /@nianchu/dsh-rollback/0.4.3` 连续 9 次 404、第 10 次（约 2 分钟后）才 200 —— 这是 CDN 对「发布前探测过的不存在对象」的负面缓存。查真实状态必须带 **cache-buster**（`?t=<random>`）；浏览器与任何本地缓存都会骗你。
+3. **`github.com:443` 可能整体不通，而 `api.github.com` / `codeload.github.com` 照常** —— `git push` 走的正是前者（本次一度连续 3 次 `Connection was reset`）。此时用 Git Data API 复刻推送，sha 可**逐字符相同**、不产生分叉：`_push-commit-via-api.mjs`（建 blob → 以 parent 的 tree 作 `base_tree` 建 tree → 复刻 author/committer/时间戳建 commit → PATCH ref）。本地与远端会停在同一个 sha，网络恢复后直接 `git push` 即 up-to-date，无需 reset/rebase。
+4. **PS 5.1 的 `Get-Content` 读 UTF-8 文件会整片乱码**（按 ANSI 解码）。看这个文件请用 node 或 `Get-Content -Encoding UTF8`；判断「文件里到底有没有某个字符串」一律用 node。
