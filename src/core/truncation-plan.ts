@@ -49,6 +49,18 @@
  * @module @nianchu/dsh-rollback/core/truncation-plan
  */
 
+import { ROLLBACK_MARKER_SOURCE } from './marker-source.ts'
+
+/**
+ * Re-exported, because this is the module that BUILDS the marker.
+ *
+ * The value itself lives in `core/marker-source.ts`, shared with every reader
+ * (the browser half reads it too, and a leaf module keeps the planner out of
+ * that bundle). That module documents the three spellings a log can hold and why
+ * v4 rejects two of them.
+ */
+export { ROLLBACK_MARKER_SOURCE }
+
 /** Minimal structural view of one session event. */
 export interface TruncationEvent {
   readonly type: string
@@ -86,14 +98,6 @@ export interface SessionView {
  */
 export const ROLLBACK_CHECKPOINT_TEXT =
   'Automated checkpoint: earlier messages removed, files restored to that point. Continue from what remains; don\'t mention this checkpoint.'
-
-/**
- * Provenance stamped on the marker, so the client recognizes its own node.
- *
- * `kind: 'plugin'` is what the session validates (a `source.kind` must be a
- * non-empty string) and what the client's chat-node definition matches on.
- */
-export const ROLLBACK_MARKER_SOURCE = { kind: 'plugin', plugin: 'rollback' } as const
 
 /** An inclusive surface seq range, as plain numbers — no framework field names. */
 export interface MarkerRange {

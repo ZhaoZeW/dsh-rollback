@@ -141,6 +141,13 @@ describe('planTruncationMarker', () => {
     expect(plan.data.id).toBe('rollback-truncation-x')
     expect(plan.data.role).toBe('user')
     expect(plan.data.source).toEqual(ROLLBACK_MARKER_SOURCE)
+    // The source must be producer-owned: v4 refuses `kind: 'plugin'` while
+    // ENCODING the event, inside the persistence drain, one turn after this plan
+    // was applied — and the failed batch is then retained at the head of the write
+    // queue, wedging every later write of that session with the same error. An
+    // append that "succeeded" here can therefore brick the session, so the
+    // spelling is asserted rather than assumed.
+    expect(plan.data.source.kind).not.toBe('plugin')
     // Non-empty content: a strict OpenAI-compatible gateway rejects a user
     // message with no content, which is why the marker is never empty.
     expect(plan.data.content).toEqual([{ type: 'text', text: ROLLBACK_CHECKPOINT_TEXT }])

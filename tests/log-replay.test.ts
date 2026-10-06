@@ -11,6 +11,11 @@ function legacyMarker(seq: number, start: number, end: number) {
   return { type: 'user/message', seq, surfaceOp: { op: 'replace', start, end }, data: { source: { plugin: 'rollback' } } }
 }
 
+/** The marker as DSH 0.2.0 (session format v4) requires it, and this build writes it. */
+function v4Marker(seq: number, start: number, end: number) {
+  return { type: 'user/message', seq, surfaceOp: { op: 'replace', startSeq: start, endSeq: end }, data: { source: { kind: 'plugin:rollback' } } }
+}
+
 describe('replacedSurfaceRanges', () => {
   it('collects the ranges this plugin’s rollbacks replaced', () => {
     const events = [marker(805, 140, 795), marker(810, 7, 805)]
@@ -31,6 +36,17 @@ describe('replacedSurfaceRanges', () => {
 
   it('reads a log that mixes markers from before and after the upgrade', () => {
     const events = [legacyMarker(200, 10, 160), marker(400, 210, 370)]
+    expect(replacedSurfaceRanges(events)).toEqual([{ start: 10, end: 160 }, { start: 210, end: 370 }])
+  })
+
+  it('reads the v4 spelling this build writes, next to the legacy one', () => {
+    // The upgrade case in the other direction: migrating a log to session format
+    // v4 REWROTE every marker's source to `plugin:rollback` rather than dropping
+    // it, and markers written since carry that spelling. A reader that knew only
+    // the old shape would stop seeing the replaced ranges of exactly the upgraded
+    // sessions — rolled-back turns back as phantoms, and a "created file" recorded
+    // in one free to delete a file the user has since recreated.
+    const events = [v4Marker(200, 10, 160), marker(400, 210, 370)]
     expect(replacedSurfaceRanges(events)).toEqual([{ start: 10, end: 160 }, { start: 210, end: 370 }])
   })
 

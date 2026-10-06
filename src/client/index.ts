@@ -19,6 +19,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { FishLogo, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { isRollbackMarkerSource } from '../core/marker-source.ts'
 import { parsePreview, type PreviewEntry } from '../core/preview-format.ts'
 import { footerEntryNeeded } from '../core/turn-entry.ts'
 import { oldestTurnOf } from '../core/rollback-guard.ts'
@@ -1808,9 +1809,13 @@ const markerDefinition = {
     // Current builds: a `user/message` stamped with this plugin's provenance.
     // Its content is the model-facing checkpoint text, so the client reads the
     // rolled-back range from the EVENT (`surfaceOp.startSeq`/`start`) instead.
+    // Every spelling this plugin has ever written matches, because one log holds
+    // the markers DSH was upgraded over as well as the ones written since (see
+    // `core/marker-source.ts`). Matching only the spelling written today would
+    // leave an upgraded session's rolled-back range drawn as ordinary history.
     if (event?.type === 'user/message') {
       const source = event?.data?.source
-      if (source?.kind !== 'plugin' || source?.plugin !== 'rollback') return null
+      if (!isRollbackMarkerSource(source)) return null
       // The PROVENANCE is the marker, and the host writes that marker under two
       // surface ops: a `replace` naming the range it took out, and an `append` for
       // the degenerate rollback that had nothing left to replace (the only legal

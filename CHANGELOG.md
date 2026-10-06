@@ -1,5 +1,13 @@
 # 更新日志
 
+## 0.4.2 — 修正 v4 会话格式下的标记来源（旧写法会卡死整个会话）
+
+- **标记来源改用 v4 要求的产生者所属 kind**：回退标记（一条 `user/message`）原先盖 `source = { kind: 'plugin', plugin: 'rollback' }`。DSH 0.2.0（会话格式 v4）在**编码**该事件时拒绝 `kind === 'plugin'`（`assertV4MessageSources`：`format v4 message requires a producer-owned source kind`），而这次拒绝发生在持久化 drain 里、**不在** append 的调用栈上：append 已经返回成功，失败批次却被留在写队列头部（`drainPaused`），此后该会话**每一次**写入都重新编码同一批次并抛同一个错。用户看到的就是每一轮都「本轮运行失败」，且与所选模型无关（切回 `deepseek-v4-flash` 无效）。现写入 `{ kind: 'plugin:rollback' }`，与 DSH 自身 v3→v4 迁移给未登记插件分配的拼写一致（`producerKind()` → `plugin:<name>`，并丢掉 `plugin` 字段）。
+- **新增 `src/core/marker-source.ts`**：标记来源的唯一出处——写入常量 `ROLLBACK_MARKER_SOURCE`、kind 常量与读取判定 `isRollbackMarkerSource()`。`src/core/truncation-plan.ts` 仍导出该常量（它是构造标记的地方，保留导出以免破坏既有引用）。
+- **读取端同时接受三种拼写**：`{ plugin: 'rollback' }`、`{ kind: 'plugin', plugin: 'rollback' }`、`{ kind: 'plugin:rollback' }`。日志是 append-only 的，而 v4 迁移是把旧标记**重写**而非丢弃，所以同一个文件里两种拼写并存；只认新拼写会让升级过会话的已回退区段重新可见（幻影轮次、以及「曾创建的文件」误删用户后来重建的文件）。`src/core/log-replay.ts` 与浏览器半（`src/client/index.ts` 的 `markerDefinition.match`）改用同一判定，避免两处规则再次分叉。
+- **兼容范围未改**：`dsh.engines.dsh` 仍为 `>=0.1.5-rc.2`。v3 的来源 kind 白名单只作用于 **v2→v3 迁移**路径，v3 原生准入从不约束 `user/message` 的 `source.kind`，因此新拼写在旧引擎上同样可写入、可读取。
+- **测试**：新增 `tests/marker-source.test.ts`（三种拼写 + 拒绝 compaction/畸形来源）；`tests/log-replay.test.ts` 增加 v4 拼写用例；`tests/truncation-plan.test.ts` 断言标记 kind 不等于 `'plugin'`——把这条规则钉在构造处，防止「append 假成功」再次溜过 CI。
+
 ## 0.4.1 — 修正 bundle patch 的过期注释
 
 - **`cordis.patch.yml` 的注释不再声称存在模型工具**：原文沿用上游的「exposed as a model `rollback` tool」，但本 fork 的 `inject` 列表不含 `tools` 服务，源码中也没有任何 tool 注册 —— 实际暴露面只有 `/rollback` 命令（`src/index.ts:172` 的 `ctx.commands.register`）与两个 Web 插槽（每轮回退按钮、回退标记节点）。现改为如实描述，并明确标注**只能由人发起**。
