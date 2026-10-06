@@ -279,3 +279,20 @@ format v4 message requires a producer-owned source kind
 - 落盘后核对：`lib/index.js`、`lib/invariant.js`、`lib/client.js`、`package.json`、`cordis.patch.yml` 的 SHA256 与仓库构建产物**逐一相同**；profile 的 `dsh.profile.bundles` 仍列出 `@nianchu/dsh-rollback`。
 - ⚠️ **改完必须重启 DSH**：profile 的 bundle 列表只在启动时组装。
 - 24h 门禁时间表：`dsh-cost-meter@1.8.12` 于 **2026-10-06T15:26:19Z（北京 10-06 23:26）** 放行；本插件 `0.4.2` 于 **2026-10-07T06:42:55Z（北京 10-07 14:42）** 放行。在此之前该 profile 的 pnpm 操作仍会失败，属预期行为；届时 `pnpm install` 会把 desktop 收敛到 0.4.2。
+
+
+### 10.7 ⚠️ 事故：改 profile 的 package.json 写进了 BOM（2026-10-06）
+
+用 Windows PowerShell 5.1 的 `Set-Content -Encoding UTF8` 修改 `profiles/desktop/package.json` 时，**PS 5.1 会在文件开头写入 UTF-8 BOM**（字节 `EF BB BF`）。DSH 启动时 `readProfileManifest`（`@deepseek-ai/dsh-app-boot`）对该文件直接 `JSON.parse`，于是宿主启动失败：
+
+```
+DesktopHostFatalError: Unexpected token '', "{
+  "name"... is not valid JSON
+    at JSON.parse ... readProfileManifest ... loadProfileDirectory ... main
+```
+
+（crash log 落在 `C:\Users\Administrator\AppData\Roaming\@deepseek-ai\dsh-desktop\logs\crash-*.log`）
+
+**规则：不要用 PS 5.1 的 `Set-Content -Encoding UTF8` 改 profile 的 JSON/YAML。** 改用 node（`fs.writeFileSync(p, text, 'utf8')` 不写 BOM）或 `[System.IO.File]::WriteAllText($p, $s, (New-Object System.Text.UTF8Encoding($false)))`。改完务必校验首字节不是 `EF BB BF` 并 `JSON.parse` 一次。
+
+同理：**不要用 PowerShell 拼 GitHub API 的 JSON 正文**（见 10.5 第 1 条）——同一个成因。核对文件内容也别用 `Select-String -SimpleMatch`（会给假阴性），用 node。
