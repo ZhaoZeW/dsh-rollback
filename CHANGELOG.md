@@ -1,5 +1,13 @@
 # 更新日志
 
+## 0.4.3 — 文档与兼容矩阵（无行为变更）
+
+- **明确 0.2.0-rc.2（官方桌面版）为已实测目标**：回退、续写、重启前后预览一致均在该构建上跑通。
+- **README 重写**：把「它解决什么问题 / 功能 / 使用 / 本次更新修了什么」放到最前，写清 0.4.2 修掉的「回退后该会话再也写不进去」的完整根因与报错原文（`format v4 message requires a producer-owned source kind`），便于遇到同样症状的人搜到。
+- **与上游的关系改为如实表述**：上游 0.4.0 也独立适配了 0.2.0-rc.2，因此不再声称「上游未验证」；改为明确说明两者**不能同时安装**（注册同一插件 id `rollback` 与同一 `/rollback` 命令），并把行为差异表显式限定为「相对本 fork 自己的基线（上游 0.3.1）」，不构成对上游当前版本的判断。
+- **行为无变更**：`lib/index.js`、`lib/client.js`、`lib/invariant.js` 与 0.4.2 的差异**仅限 `PLUGIN_VERSION` 那一行**。
+- **为什么为文档再发一版**：npm 页面上的介绍是发布时烘进 tarball 的 README，只有重新发布才能刷新；GitHub 侧的 README 与本文件同源。
+
 ## 0.4.2 — 修正 v4 会话格式下的标记来源（旧写法会卡死整个会话）
 
 - **标记来源改用 v4 要求的产生者所属 kind**：回退标记（一条 `user/message`）原先盖 `source = { kind: 'plugin', plugin: 'rollback' }`。DSH 0.2.0（会话格式 v4）在**编码**该事件时拒绝 `kind === 'plugin'`（`assertV4MessageSources`：`format v4 message requires a producer-owned source kind`），而这次拒绝发生在持久化 drain 里、**不在** append 的调用栈上：append 已经返回成功，失败批次却被留在写队列头部（`drainPaused`），此后该会话**每一次**写入都重新编码同一批次并抛同一个错。用户看到的就是每一轮都「本轮运行失败」，且与所选模型无关（切回 `deepseek-v4-flash` 无效）。现写入 `{ kind: 'plugin:rollback' }`，与 DSH 自身 v3→v4 迁移给未登记插件分配的拼写一致（`producerKind()` → `plugin:<name>`，并丢掉 `plugin` 字段）。

@@ -1,7 +1,7 @@
 {
   "name": "@nianchu/dsh-rollback",
-  "description": "TRAE-style conversation rollback for DeepSeek Harness: per-turn checkpoints, file restore + in-place conversation truncation, a /rollback command, and a Web rollback button with an affected-file diff preview.",
-  "version": "0.4.2",
+  "description": "TRAE-style rollback for DeepSeek Harness (DSH): roll workspace files and model context back to before any turn, with a live on-disk diff preview and a /rollback doctor contract check. 已在 DSH 0.2.0-rc.2（官方桌面版）实测。",
+  "version": "0.4.3",
   "author": "nianchu",
   "license": "MIT",
   "type": "module",

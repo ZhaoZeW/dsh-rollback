@@ -54,7 +54,7 @@ export interface ContractAudit {
 }
 
 /** The plugin's own release, mirrored from package.json at build time by hand. */
-export const PLUGIN_VERSION = '0.4.2'
+export const PLUGIN_VERSION = '0.4.3'
 
 /** Capability ids, so callers and tests name seams without string duplication. */
 export const CONTRACT_IDS = {
