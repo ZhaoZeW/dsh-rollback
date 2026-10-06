@@ -1,10 +1,10 @@
 # 上架交接单（@nianchu/dsh-rollback → github.com/ZhaoZeW/dsh-rollback）
 
-**状态：npm 已发布 · GitHub 仓库与 Release 已发布 · 注册表 PR 已提交（等合并）**
+**状态：已上架（npm · GitHub Release · 市场目录）· 当前版本 0.4.2 · 构建/测试/产物自检全绿**
 
-- npm：`@nianchu/dsh-rollback@0.4.1`（`latest`）— 见第九节
-- 注册表 PR：<https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992> — 见第八节
-- ⚠️ 待办：0.4.1 的**代码尚未推送**到 GitHub，`v0.4.1` 的 tag/Release 也还没建（需要一个新 GitHub token）
+- npm：`@nianchu/dsh-rollback@0.4.2`（`latest`，2026-10-06T06:42:55Z）— 见第九节与第十节
+- 注册表 PR <https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/5992> **已于 2026-10-05T16:18:07Z 合并**（merge commit `d213226c174c723996ed00c2f4b12b01788d9c`）。目录条目 `data/plugins/ZhaoZeW__dsh-rollback.yml` 用 `latest/download/dsh-rollback.tgz` 跟随最新 Release，**以后发版不必再提 PR**。
+- ⚠️ **0.4.1 有严重缺陷**：会让被回退过的会话彻底无法继续（每一轮都「本轮运行失败」，切模型无效）。已由 0.4.2 修复 —— 见第十节。
 
 ---
 
@@ -222,3 +222,60 @@ run `36320351090`（workflow `PR check` / job `check`）：**17/17 步全部 `su
 - [ ] **已知遗留（未验证）**：本次重启前后，当前会话的检查点文件从 ~386 KB 变为 ~237 KB（插件从会话日志重建捕获状态所致）。**「跨重启回退到重启前某轮」是否仍正常，尚未实测** —— 需要用界面里的 `/rollback list` 与 `/rollback doctor` 确认。
 
 
+
+
+---
+
+## 十、0.4.2 —— 修正 v4 会话格式下的标记来源（2026-10-06）
+
+### 10.1 缺陷（0.4.1 及更早）
+
+回退标记是一条 `user/message`，`source` 盖的是 `{ kind: 'plugin', plugin: 'rollback' }`。DSH 0.2.0（会话格式 v4）**在编码该事件时**拒绝 `kind === 'plugin'`：
+
+```
+format v4 message requires a producer-owned source kind
+```
+
+（`assertV4MessageSources`，`@deepseek-ai/dsh-session-format-v3-to-v4`）
+
+关键在于这次拒绝发生在**持久化 drain 里**，不在 append 的调用栈上：append 已经返回成功，失败批次却被留在写队列头部，此后该会话**每一次**写入都重新编码同一批次并抛同一个错 —— **与所选模型无关**（切模型、切回 `deepseek-v4-flash` 都无效）。表现：被回退过的那一轮之后，每一轮都提示「本轮运行失败」。
+
+### 10.2 修复
+
+- **写入端**改为 v4 要求的产生者所属 kind：`{ kind: 'plugin:rollback' }`。这正是 DSH 自身 v3→v4 迁移给未登记插件分配的拼写（`producerKind()` → `plugin:<name>`，并丢掉 `plugin` 字段）。
+- **新增 `src/core/marker-source.ts`**：标记来源的唯一出处 —— `ROLLBACK_MARKER_KIND`、`ROLLBACK_MARKER_SOURCE` 与读取判定 `isRollbackMarkerSource()`。`src/core/log-replay.ts` 与客户端 `markerDefinition.match` 一律改走该判定。
+- **读取端同时接受三种拼写**：`{ plugin: 'rollback' }`、`{ kind: 'plugin', plugin: 'rollback' }`、`{ kind: 'plugin:rollback' }`。日志是 append-only 的，而 v4 迁移是把旧标记**重写**而非丢弃，所以同一个文件里两种拼写并存；只认新拼写会让升级过会话的已回退区段重新可见（幻影轮次，以及「曾创建的文件」误删你后来重建的文件）。
+- **不会误判别的插件**：`{ kind: 'plugin', plugin: 'compaction' }` 这类来源不匹配。
+- **兼容范围未改**：`dsh.engines.dsh` 仍为 `>=0.1.5-rc.2`。v3 的来源 kind 白名单只作用于 v2→v3 **迁移**路径，v3 原生准入从不约束 `user/message` 的 `source.kind`。
+
+### 10.3 验证
+
+- 单元测试 **280 通过 / 0 失败**；产物自检 **27/27**；`lib/*.js` 重建后**哈希逐字节一致**（构建可复现）。
+- 用**宿主自己的 v4 编解码代码**（从运行中的 `app.asar` 原样抽出的 `@deepseek-ai/dsh-session-format*` @0.2.0-rc.2，配仓库测试的 loader hook，脚本 `C:\Users\Administrator\.dsh\_v4verify\check.mjs`）跑真实计划产物：新拼写在 `assertV4RowAdmission` 与 `encodeEvent` 两个入口**都通过**；0.4.1 的旧拼写在两处都被拒，报文**正是**上面那条 —— 完整复现了那次故障。
+- 发布产物核对：npm tarball 与 `release/*.tgz` **解包后 8 个文件逐字节相同**（tgz 自身字节不同，仅因压缩参数）；`latest/download/dsh-rollback.tgz` 实测 HTTP 200 且 sha1 = 本地 `8fa1305a8f373067c5d41cd4b7b8e1c63397649f`；npm `0.4.2` 的 `gitHead = 1b4d234ab9aa138681288932df242d9a0963f4a9` 与本地 HEAD 一致。
+- 构建产物里的运行时常量已核实：`const ROLLBACK_MARKER_KIND = "plugin:rollback"`、`ROLLBACK_MARKER_SOURCE = { kind: ROLLBACK_MARKER_KIND }`；`lib/` 里 3 处 `kind: 'plugin'` **全部在注释里**，没有任何代码再写旧拼写。
+
+### 10.4 发布记录
+
+- 代码：`1b4d234`（12 files, +380/−31），注解 tag `v0.4.2`，`main` 已同步（本地 HEAD = 远端 main）。
+- npm：`@nianchu/dsh-rollback@0.4.2`（`latest`）。
+- GitHub Release `v0.4.2`（id `404397207`，非 draft/prerelease），两个资产：`dsh-rollback.tgz`（版本无关，供 `latest/download/` 用）+ `dsh-rollback-0.4.2.tgz`。
+- 市场目录条目已在（`category: ui`，`npm: @nianchu/dsh-rollback` + `tarball: .../latest/download/dsh-rollback.tgz`）。目录里那个 `version` 字段是**对方 CI 抓取的信息字段**，会自动更新，不需要我们改。
+
+### 10.5 本次新踩的坑
+
+1. **不要用 PowerShell 写 GitHub API 的 JSON 正文。** PS 5.1 的 `Get-Content` 默认按 ANSI 解码 UTF-8，中文变乱码；`Invoke-RestMethod` 组 body 时还容易把 PS 对象序列化混进去 —— 本次 Release 正文一度变成 `{"value" => "...", "PSPath" => ...}` 的垃圾（27521 字符）。**改用 node（`fs.readFileSync(p,'utf8')` + `fetch` + `JSON.stringify`）一次通过**（改成 1642 字符）。
+2. `PATCH /releases/tags/{tag}` 本次返回 **404**（空回执），连带资产上传 URL 变成 `.../releases//assets` 也 404。**改为先 `GET /releases/tags/{tag}` 取 `id`，再 `PATCH /releases/{id}`**，问题消失。
+3. 创建 Release 时 `body` 传**字节数组**会 422，传**字符串**正常。
+4. **`Select-String -SimpleMatch` 会给假阴性**：查 `plugin:rollback` 返回 0 处，而 node 读出 2 处。核对构建产物请用 node。
+
+### 10.6 本机 profile 部署（重要）
+
+- `profiles/desktop`（用户实际在用的 profile）原先装的是 **0.4.1（有缺陷的版本）**。
+- **pnpm 路线被该 profile 自己的供应链策略挡住**：`dsh plugin --profile desktop add -w "@nianchu/dsh-rollback@^0.4.2"` 报
+  `[ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION] 1 lockfile entries failed verification: dsh-cost-meter@1.8.12 was published at 2026-10-05T15:26:19.307Z, within the minimumReleaseAge cutoff`。
+  即：锁文件里**别的包**没过 24 小时门禁，会导致该 profile 里**任何** `dsh plugin add` 都失败。注意 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里**已经有** `dsh-cost-meter@1.8.12`，但 pnpm 的锁文件校验**不采信**该排除项。
+- 因此改为**手工落盘 + 同步 spec**（与更早一次部署同法）：把仓库构建产物 8 个文件覆盖到 `profiles/desktop/node_modules/@nianchu/dsh-rollback`，并把 `package.json` 依赖由 `0.4.1` 改为 `^0.4.2`。**故意不留在 0.4.1**：否则日后 `pnpm install` 会静默降级回有缺陷的版本（上次就是这么丢的部署）。0.4.1 原目录备份在 `C:\Users\Administrator\.dsh\_backup\desktop-dsh-rollback-0.4.1`。
+- 落盘后核对：`lib/index.js`、`lib/invariant.js`、`lib/client.js`、`package.json`、`cordis.patch.yml` 的 SHA256 与仓库构建产物**逐一相同**；profile 的 `dsh.profile.bundles` 仍列出 `@nianchu/dsh-rollback`。
+- ⚠️ **改完必须重启 DSH**：profile 的 bundle 列表只在启动时组装。
+- 24h 门禁时间表：`dsh-cost-meter@1.8.12` 于 **2026-10-06T15:26:19Z（北京 10-06 23:26）** 放行；本插件 `0.4.2` 于 **2026-10-07T06:42:55Z（北京 10-07 14:42）** 放行。在此之前该 profile 的 pnpm 操作仍会失败，属预期行为；届时 `pnpm install` 会把 desktop 收敛到 0.4.2。
